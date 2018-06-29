@@ -1,26 +1,53 @@
 package sinjl;
 
 import java_cup.runtime.*;
-import lexjl.AnalizadorLexico;
-import lexjl.UnidadLexica;
-import errors.GestionErrores;
+import FileReader;
 
-scan with {: return getScanner().next_token(); :};
+
+
+
 parser code {: 
-   private GestionErrores errores;
-   public void syntax_error(Symbol unidadLexica) {
-     errores.errorSintactico((UnidadLexica)unidadLexica);
-   }
-:};
-init with {: 
-   errores = new GestionErrores();
-   AnalizadorLexico lexjl = (AnalizadorLexico)getScanner();
-   lexjl.fijaGestionErrores(errores);
+
+
+	//Reportar error encontrado
+	
+	public void report_error(String message, Object info) {
+		StrubgBuilder n = new StringBuilder("Error");
+		if (info instanceof hava_cup.runtime.Symbol) {
+			java_cup.runtime.Symbol s = ((java_cup.runtime.Symbol) info);
+			if (s.left >= 0) {
+				m.append(" in line "+(s.left+1));
+				if (s.right >= 0) 
+					m.append(", column "+(s.right + 1));
+			}
+		}
+		m.append(" : " + message);
+		System.err.println(m);
+	}
+	
+	//Error fatal, se finaliza la ejecucion
+	public void report_fatal_error(String message, Object info) {
+		report_error(message, infor);
+		System.exit(1);
+	}
+	
+	public static void aSintactico(String file){
+		try{
+			AnalizadorSintactico asin = new AnalizadorSintactico(
+				new AnalizadorLexico (new FileReader(file)));
+  
 :};
 
 
-terminal     DONDE, EVALUA, IDEN, ENT, REAL, MAS,
-             MENOS, POR, DIV, IGUAL, COMA, PAP, PCIERRE;
+
+terminal     EQ, LT, NOT, EQEQ, LTEQ, NOTEQ, ANDAND, OROR, PLUS, MINUS, MULT, DIV,
+             LPAREN, RPAREN, LBRACE, RBRACE, LBRACK, RBRACK, SEMICOLON, COMMA, DOT,
+			 BOOL, CONST, ELSE, INT, IF, RETURN, VOID, WHILE, FUNCTION, START, DECVAR;
+
+terminal String	IDENTIFIER;
+terminal Integer INTEGER_LITERAL;
+terminal Boolean BOOLEAN_LITERAL;
+			 
 
 non terminal  S, Ds, LDs, D, E0, E1, E2, OP0, OP1;
 

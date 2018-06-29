@@ -1,58 +1,33 @@
 /* JL language lexer specification */
+package lexjl;
 
 import java_cup.runtime.*;
+import java.io.Reader;
 
 %%
 
-%public
-%class Scanner
-%implements sym
-
+%class AnalizadorLexico
 %unicode
-
+%cup
 %line
 %column
 
-%cup
-%cupdebug
-
 %{
-  StringBuilder string = new StringBuilder();
-  
-  private Symbol symbol(int type) {
-    return new JavaSymbol(type, yyline+1, yycolumn+1);
-  }
+	private Symbol symbol(int type) {
+		return new Symbol(type, yyline, yycolumn);
+	}
 
-  private Symbol symbol(int type, Object value) {
-    return new JavaSymbol(type, yyline+1, yycolumn+1, value);
-  }
-
-  /** 
-   * assumes correct representation of a long value for 
-   * specified radix in scanner buffer from <code>start</code> 
-   * to <code>end</code> 
-   */
-  private long parseLong(int start, int end, int radix) {
-    long result = 0;
-    long digit;
-
-    for (int i = start; i < end; i++) {
-      digit  = Character.digit(yycharat(i),radix);
-      result*= radix;
-      result+= digit;
-    }
-
-    return result;
-  }
+	private Symbol symbol(int type, Object value) {
+		return new Symbol(type, yyline, yycolumn, value);
+	}
 %}
 
 /* main character classes */
 LineTerminator = \r|\n|\r\n
-InputCharacter = [^\r\n]
-
 WhiteSpace = {LineTerminator} | [ \t\f]
 
 /* comments */
+InputCharacter = [^\r\n]
 Comment = "//" {InputCharacter}* {LineTerminator}?
 
 /* identifiers */
@@ -61,72 +36,56 @@ Identifier = [:jletter:][:jletterdigit:]*
 /* integer literals */
 DecIntegerLiteral = 0 | [1-9][0-9]*
 
-/* string and character literals */
-SingleCharacter = [^\r\n\'\\]
-
-%state CHARLITERAL
-
 %%
 
 <YYINITIAL> {
 
   /* keywords */
-  "bool"                     	 { return symbol(BOOL); }
-  "char"                         { return symbol(CHAR); }
-  "const"                        { return symbol(CONST); }
-  "else"                         { return symbol(ELSE); }
-  "int"                          { return symbol(INT); }
-  "if"                           { return symbol(IF); }
-  "return"                       { return symbol(RETURN); }
-  "void"                         { return symbol(VOID); }
-  "while"                        { return symbol(WHILE); }
-  "function"                     { return symbol(FUNCTION); }
-  "start"                        { return symbol(START); }
-  "decVar"                       { return symbol(DECVAR); }
-  "try"                          { return symbol(TRY); }
-  "volatile"                     { return symbol(VOLATILE); }
-  "strictfp"                     { return symbol(STRICTFP); }
-  
+  "bool"                     	 { return symbol(sym.BOOL); }
+  "const"                        { return symbol(sym.CONST); }
+  "else"                         { return symbol(sym.ELSE); }
+  "int"                          { return symbol(sym.INT); }
+  "if"                           { return symbol(sym.IF); }
+  "return"                       { return symbol(sym.RETURN); }
+  "void"                         { return symbol(sym.VOID); }
+  "while"                        { return symbol(sym.WHILE); }
+  "function"                     { return symbol(sym.FUNCTION); }
+  "start"                        { return symbol(sym.START); }
+  "decVar:"                       { return symbol(sym.DECVAR); }
+ 
   /* boolean literals */
-  "true"                         { return symbol(BOOLEAN_LITERAL, true); }
-  "false"                        { return symbol(BOOLEAN_LITERAL, false); }
+  "true"                         { return symbol(sym.BOOLEAN_LITERAL, true); }
+  "false"                        { return symbol(sym.BOOLEAN_LITERAL, false); }
   
   /* separators */
-  "("                            { return symbol(LPAREN); }
-  ")"                            { return symbol(RPAREN); }
-  "{"                            { return symbol(LBRACE); }
-  "}"                            { return symbol(RBRACE); }
-  "["                            { return symbol(LBRACK); }
-  "]"                            { return symbol(RBRACK); }
-  ";"                            { return symbol(SEMICOLON); }
-  ","                            { return symbol(COMMA); }
-  "."                            { return symbol(DOT); }
+  "("                            { return symbol(sym.LPAREN); }
+  ")"                            { return symbol(sym.RPAREN); }
+  "{"                            { return symbol(sym.LBRACE); }
+  "}"                            { return symbol(sym.RBRACE); }
+  "["                            { return symbol(sym.LBRACK); }
+  "]"                            { return symbol(sym.RBRACK); }
+  ";"                            { return symbol(sym.SEMICOLON); }
+  ","                            { return symbol(sym.COMMA); }
+  "."                            { return symbol(sym.DOT); }
   
   /* operators */
-  "="                            { return symbol(EQ); }
-  "<"                            { return symbol(LT); }
-  "!"                            { return symbol(NOT); }
-  ":"                            { return symbol(COLON); }
-  "=="                           { return symbol(EQEQ); }
-  "<="                           { return symbol(LTEQ); }
-  "!="                           { return symbol(NOTEQ); }
-  "&&"                           { return symbol(ANDAND); }
-  "||"                           { return symbol(OROR); }
-  "+"                            { return symbol(PLUS); }
-  "-"                            { return symbol(MINUS); }
-  "*"                            { return symbol(MULT); }
-  "/"                            { return symbol(DIV); }
+  "="                            { return symbol(sym.EQ); }
+  "<"                            { return symbol(sym.LT); }
+  "!"                            { return symbol(sym.NOT); }
+  "=="                           { return symbol(sym.EQEQ); }
+  "<="                           { return symbol(sym.LTEQ); }
+  "!="                           { return symbol(sym.NOTEQ); }
+  "&&"                           { return symbol(sym.ANDAND); }
+  "||"                           { return symbol(sym.OROR); }
+  "+"                            { return symbol(sym.PLUS); }
+  "-"                            { return symbol(sym.MINUS); }
+  "*"                            { return symbol(sym.MULT); }
+  "/"                            { return symbol(sym.DIV); }
   
-  /* character literal */
-  \'                             { yybegin(CHARLITERAL); }
 
   /* numeric literals */
-
-  /* This is matched together with the minus, because the number is too big to 
-     be represented by a positive integer. */
-  "-2147483648"                  { return symbol(INTEGER_LITERAL, new Integer(Integer.MIN_VALUE)); }
   
-  {DecIntegerLiteral}            { return symbol(INTEGER_LITERAL, new Integer(yytext())); }
+  {DecIntegerLiteral}            { return symbol(sym.INTEGER_LITERAL, new Integer(yytext())); }
     
   /* comments */
   {Comment}                      { /* ignore */ }
@@ -135,29 +94,7 @@ SingleCharacter = [^\r\n\'\\]
   {WhiteSpace}                   { /* ignore */ }
 
   /* identifiers */ 
-  {Identifier}                   { return symbol(IDENTIFIER, yytext()); }  
-}
-
-
-
-
-<CHARLITERAL> {
-  {SingleCharacter}\'            { yybegin(YYINITIAL); return symbol(CHARACTER_LITERAL, yytext().charAt(0)); }
-  
-  /* escape sequences */
-  "\\b"\'                        { yybegin(YYINITIAL); return symbol(CHARACTER_LITERAL, '\b');}
-  "\\t"\'                        { yybegin(YYINITIAL); return symbol(CHARACTER_LITERAL, '\t');}
-  "\\n"\'                        { yybegin(YYINITIAL); return symbol(CHARACTER_LITERAL, '\n');}
-  "\\f"\'                        { yybegin(YYINITIAL); return symbol(CHARACTER_LITERAL, '\f');}
-  "\\r"\'                        { yybegin(YYINITIAL); return symbol(CHARACTER_LITERAL, '\r');}
-  "\\\""\'                       { yybegin(YYINITIAL); return symbol(CHARACTER_LITERAL, '\"');}
-  "\\'"\'                        { yybegin(YYINITIAL); return symbol(CHARACTER_LITERAL, '\'');}
-  "\\\\"\'                       { yybegin(YYINITIAL); return symbol(CHARACTER_LITERAL, '\\'); }
-
-  
-  /* error cases */
-  \\.                            { throw new RuntimeException("Illegal escape sequence \""+yytext()+"\""); }
-  {LineTerminator}               { throw new RuntimeException("Unterminated character literal at end of line"); }
+  {Identifier}                   { return symbol(sym.IDENTIFIER, yytext()); }  
 }
 
 /* error fallback */
