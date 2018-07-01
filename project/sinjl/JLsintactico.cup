@@ -1,10 +1,13 @@
 package sinjl;
 
 import java_cup.runtime.*;
-import FileReader;
-
-
-
+import java.io.FileReader;
+import jlAST.*;
+import jlAST.dec.consts.*;
+import jlAST.dec.decVar.*;
+import jlAST.expression.*;
+import jlAST.instruction.*;
+import jlAST.types.*;
 
 parser code {: 
 
@@ -12,8 +15,8 @@ parser code {:
 	//Reportar error encontrado
 	
 	public void report_error(String message, Object info) {
-		StrubgBuilder n = new StringBuilder("Error");
-		if (info instanceof hava_cup.runtime.Symbol) {
+		StringBuilder m = new StringBuilder("Error");
+		if (info instanceof java_cup.runtime.Symbol) {
 			java_cup.runtime.Symbol s = ((java_cup.runtime.Symbol) info);
 			if (s.left >= 0) {
 				m.append(" in line "+(s.left+1));
@@ -27,36 +30,143 @@ parser code {:
 	
 	//Error fatal, se finaliza la ejecucion
 	public void report_fatal_error(String message, Object info) {
-		report_error(message, infor);
+		report_error(message, info);
 		System.exit(1);
 	}
-	
-	public static void aSintactico(String file){
-		try{
-			AnalizadorSintactico asin = new AnalizadorSintactico(
-				new AnalizadorLexico (new FileReader(file)));
   
 :};
 
+/* Palabras reservadas */
+terminal  BOOL, CONST, ELSE, INT, IF, WHILE, DECVAR, MAIN;
 
+/*Operadores */
 
-terminal     EQ, LT, NOT, EQEQ, LTEQ, NOTEQ, ANDAND, OROR, PLUS, MINUS, MULT, DIV,
-             LPAREN, RPAREN, LBRACE, RBRACE, LBRACK, RBRACK, SEMICOLON, COMMA, DOT,
-			 BOOL, CONST, ELSE, INT, IF, RETURN, VOID, WHILE, FUNCTION, START, DECVAR;
+terminal EQ, LT, NOT, EQEQ, LTEQ, NOTEQ, ANDAND, OROR, PLUS, MINUS, MULT, DIV;
+             
+/* Delimitadores */
+terminal LPAREN, RPAREN, LBRACE, RBRACE, LBRACK, RBRACK, SEMICOLON;
+
 
 terminal String	IDENTIFIER;
-terminal Integer INTEGER_LITERAL;
-terminal Boolean BOOLEAN_LITERAL;
-			 
+terminal Integer INT_LITERAL;
+terminal Boolean BOOL_LITERAL;
 
-non terminal  S, Ds, LDs, D, E0, E1, E2, OP0, OP1;
 
-S   ::= EVALUA E0 Ds ;
-Ds  ::= DONDE LDs | ;
-LDs ::= LDs COMA D | D ;
-D   ::= IDEN IGUAL E0 ;
-E0  ::= E0 OP0 E1  | E1 ;
-E1  ::= E1 OP1 E2  | E2 ;
-E2  ::= ENT  | REAL  | IDEN  | PAP E0 PCIERRE ;  
-OP0 ::= MAS  | MENOS ;
-OP1 ::= POR | DIV ;
+/* No terminales */
+
+non terminal Program program;
+non terminal Main main;
+
+non terminal InstructionList instructionList;
+non terminal Instruction instruction;
+
+non terminal DecConst decConst;
+non terminal DecConstList decConstList;
+
+non terminal DecVar decVar;
+non terminal DecVarList decVarIni, decVarList;
+
+non terminal Type type; 
+
+non terminal Expression expression; 
+
+non terminal Variable variable;
+
+
+ precedence left PLUS, MINUS;
+ precedence left MULT, DIV;
+
+ precedence left EQEQ, NOTEQ, LT, LTEQ;
+ precedence left OROR;
+ precedence left ANDAND;
+
+start with program;
+
+program ::= decConstList:listConst main:m
+			{:RESULT = new Program(0,0, listConst, m); :}
+		| main:m
+			{:RESULT = new Program(0, 0, new DecConstList(mleft + 1, mright + 1), m); :};
+			
+main ::= MAIN:m LBRACE decVarIni:varList instructionList:iList RBRACE
+			{:RESULT = new Main(mleft, mright, varList,  iList); :};
+			
+			
+expression ::= variable:v
+            {: RESULT = v; :}
+        | expression:e1 PLUS expression:e2
+            {: RESULT = new PlusOperator(e1, e2, e1left + 1, e1right + 1); :}
+        | expression:e1 MINUS expression:e2
+            {: RESULT = new Minus(e1, e2, e1left + 1, e1right + 1); :}
+        | expression:e1 MULT expression:e2
+            {: RESULT = new Mult(e1, e2, e1left + 1, e1right + 1); :}
+		| expression:e1 DIV expression:e2
+            {: RESULT = new Div(e1, e2, e1left + 1, e1right + 1); :}
+		| expression:e1 OROR expression:e2
+            {: RESULT = new Or(e1, e2, e1left + 1, e1right + 1); :}
+		| expression:e1 ANDAND expression:e2
+            {: RESULT = new And(e1, e2, e1left + 1, e1right + 1); :}
+		| expression:e1 LT expression:e2
+            {: RESULT = new Lt(e1, e2, e1left + 1, e1right + 1); :}
+        | expression:e1 LTEQ expression:e2
+            {: RESULT = new LtEq(e1, e2, e1left + 1, e1right + 1); :}
+		| expression:e1 EQEQ expression:e2
+            {: RESULT = new EqEq(e1, e2, e1left + 1, e1right + 1); :}	
+		| expression:e1 NOTEQ expression:e2
+            {: RESULT = new NotEq(e1, e2, e1left + 1, e1right + 1); :}
+        | expression:e NOT 
+            {: RESULT = new Not(e, eleft + 1, eright + 1); :}
+        | BOOL_LITERAL:e
+            {: RESULT = new BoolLiteral(e.booleanValue(), eleft + 1, eright + 1); :}
+        | INT_LITERAL:e
+            {: RESULT = new IntegerLiteral(e.intValue(), eleft + 1, eright + 1); :}
+		| LPAREN expression:e RPAREN
+            {: RESULT = e; :};
+			
+type ::= INT:i 
+			{: RESULT = Type.IntType; :}
+		| BOOL:b
+			{: RESULT = Type.BoolType; :}
+		| type:t LBRACK INT_LITERAL:dimension RBRACK
+			{: RESULT = t.createArray(dimension.intValue()); :};
+
+variable ::= IDENTIFIER:s
+			{: RESULT = new Variable(s, sleft + 1, sright + 1); :}
+		| variable:var LBRACK expression:index RBRACK
+			{: RESULT = new ArrayVar(var, index); :};
+			
+instruction ::= variable:v EQ expression:e SEMICOLON
+			{: RESULT = new Assign(v, e, vleft + 1, vright + 1); :}
+		| IF:i LPAREN expression:e1 RPAREN LBRACE decVarIni:varList instructionList:e2 RBRACE
+			{: RESULT = new If(e1, varList, e2, ileft + 1, iright + 1); :}
+		| IF:i LPAREN expression:e1 RPAREN LBRACE decVarIni:varList1 instructionList:e2 RBRACE ELSE LBRACE decVarIni:varList2 instructionList:e3 RBRACE
+			{: RESULT = new If(e1, varList1, e2, varList2, e3, ileft + 1, iright + 1); :}
+		| WHILE:w LPAREN expression:e1 RPAREN LBRACE decVarIni:varList instructionList:e2 RBRACE
+			{: RESULT = new While(e1, varList, e2, wleft + 1, wright + 1); :};
+
+instructionList ::= instruction:i instructionList:list
+			{: RESULT = list; list.addInstruction(i); :}
+		|  
+			{: RESULT = new InstructionList(); :};
+			
+decVar ::= type:t IDENTIFIER:id SEMICOLON
+			{: RESULT = new DecVar(t, id, tleft, tright); :};
+			
+decVarList ::= decVar:v
+            {: RESULT = new DecVarList(vleft + 1, vright + 1, v); :}
+		| decVar:v decVarList:list
+            {: RESULT = list; list.addDecVar(v); :};
+
+decVarIni ::= DECVAR LBRACE decVarList:d RBRACE
+			{: RESULT = d; :}
+		|
+			{: RESULT = new DecVarList(); :};
+		
+decConst::=CONST:c BOOL IDENTIFIER:s EQ BOOL_LITERAL:b SEMICOLON
+			{: RESULT = new DecConstBool(s, b.booleanValue(), cleft + 1, cright + 1); :}
+		| CONST:c INT IDENTIFIER:s EQ INT_LITERAL:i SEMICOLON
+			{: RESULT = new DecConstInt(s, i.intValue(), cleft + 1, cright + 1); :};
+			
+decConstList ::= decConst:c
+            {: RESULT = new DecConstList(cleft + 1, cright + 1, c); :}
+		| decConst:c decConstList:list
+            {: RESULT = list; list.addDecConst(c); :};

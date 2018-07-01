@@ -3,6 +3,7 @@ package lexjl;
 
 import java_cup.runtime.*;
 import java.io.Reader;
+import sinjl.sym;
 
 %%
 
@@ -46,16 +47,13 @@ DecIntegerLiteral = 0 | [1-9][0-9]*
   "else"                         { return symbol(sym.ELSE); }
   "int"                          { return symbol(sym.INT); }
   "if"                           { return symbol(sym.IF); }
-  "return"                       { return symbol(sym.RETURN); }
-  "void"                         { return symbol(sym.VOID); }
   "while"                        { return symbol(sym.WHILE); }
-  "function"                     { return symbol(sym.FUNCTION); }
-  "start"                        { return symbol(sym.START); }
   "decVar:"                       { return symbol(sym.DECVAR); }
+  "main"                       { return symbol(sym.MAIN); }
  
   /* boolean literals */
-  "true"                         { return symbol(sym.BOOLEAN_LITERAL, true); }
-  "false"                        { return symbol(sym.BOOLEAN_LITERAL, false); }
+  "true"                         { return symbol(sym.BOOL_LITERAL, true); }
+  "false"                        { return symbol(sym.BOOL_LITERAL, false); }
   
   /* separators */
   "("                            { return symbol(sym.LPAREN); }
@@ -65,8 +63,6 @@ DecIntegerLiteral = 0 | [1-9][0-9]*
   "["                            { return symbol(sym.LBRACK); }
   "]"                            { return symbol(sym.RBRACK); }
   ";"                            { return symbol(sym.SEMICOLON); }
-  ","                            { return symbol(sym.COMMA); }
-  "."                            { return symbol(sym.DOT); }
   
   /* operators */
   "="                            { return symbol(sym.EQ); }
@@ -85,7 +81,7 @@ DecIntegerLiteral = 0 | [1-9][0-9]*
 
   /* numeric literals */
   
-  {DecIntegerLiteral}            { return symbol(sym.INTEGER_LITERAL, new Integer(yytext())); }
+  {DecIntegerLiteral}            { return symbol(sym.INT_LITERAL, new Integer(yytext())); }
     
   /* comments */
   {Comment}                      { /* ignore */ }
@@ -99,5 +95,4 @@ DecIntegerLiteral = 0 | [1-9][0-9]*
 
 /* error fallback */
 [^]                              { throw new RuntimeException("Illegal character \""+yytext()+
-                                                              "\" at line "+yyline+", column "+yycolumn); }
-<<EOF>>                          { return symbol(EOF); }
+                                                              "\" at line "+ (yyline + 1) +", column "+ (yycolumn + 1)); }
