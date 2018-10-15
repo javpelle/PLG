@@ -29,6 +29,9 @@ public abstract class ASTNode {
 		return line;
 	}
 	
+	/**
+	* Devuelve la columna de un posible error
+	*/
 	public int getCol() {
 		return col;
 	}

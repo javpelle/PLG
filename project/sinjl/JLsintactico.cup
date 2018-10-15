@@ -12,7 +12,7 @@ import jlAST.types.*;
 parser code {: 
 
 
-	//Reportar error encontrado
+	// Reportar error encontrado
 	
 	public void report_error(String message, Object info) {
 		StringBuilder m = new StringBuilder("Error");

@@ -9,7 +9,7 @@ En el primer caso, ejecutar:
   > maquinaP input.txt
 
 
-En el segundo, escribir en la linea de comandos de GHCI:
+En el segundo, escribir en la linea de comandos de GHCI: 
   > :main input.txt
 
 
